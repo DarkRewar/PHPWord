@@ -55,18 +55,41 @@ class Chart extends AbstractElement
     private $style;
 
     /**
+     * Chart options
+     * @var array
+     */
+    private $options = array();
+
+    /**
      * Create new instance
      *
      * @param string $type
      * @param array $categories
      * @param array $values
+     * @param string $title
      * @param array $style
      */
-    public function __construct($type, $categories, $values, $style = null)
+    public function __construct($type, $categories, $values, $title = '', $style = null)
     {
         $this->setType($type);
-        $this->addSeries($categories, $values);
+        $this->addSeries($categories, $values, $title);
         $this->style = $this->setNewStyle(new ChartStyle(), $style, true);
+    }
+
+    /**
+     * Add series
+     *
+     * @param array $categories
+     * @param array $values
+     * @return void
+     */
+    public function addSeries($categories, $values, $title = '')
+    {
+        $this->series[] = array(
+            'categories' => $categories,
+            'values'     => $values,
+            'title'      => $title,
+        );
     }
 
     /**
@@ -92,18 +115,6 @@ class Chart extends AbstractElement
     }
 
     /**
-     * Add series
-     *
-     * @param array $categories
-     * @param array $values
-     * @return void
-     */
-    public function addSeries($categories, $values)
-    {
-        $this->series[] = array('categories' => $categories, 'values' => $values);
-    }
-
-    /**
      * Get series
      *
      * @return array
@@ -121,5 +132,37 @@ class Chart extends AbstractElement
     public function getStyle()
     {
         return $this->style;
+    }
+
+    /**
+     * @return array
+     */
+    public function getOptions()
+    {
+        return $this->options;
+    }
+
+    /**
+     * @param array $options
+     */
+    public function setOptions($options)
+    {
+        $this->options = $options;
+        return $this;
+    }
+
+    /**
+     * Add options to the actual options, merge them.
+     *
+     * @param $options
+     * @return self
+     */
+    public function addOptions($options)
+    {
+        if (is_array($options)) {
+            $this->options = array_merge_recursive($this->options, $options);
+        }
+
+        return $this;
     }
 }

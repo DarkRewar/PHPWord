@@ -41,14 +41,14 @@ class Chart extends AbstractPart
      * @var array
      */
     private $types = array(
-        'pie'       => array('type' => 'pie', 'colors' => 1),
-        'doughnut'  => array('type' => 'doughnut', 'colors' => 1, 'hole' => 75, 'no3d' => true),
-        'bar'       => array('type' => 'bar', 'colors' => 0, 'axes' => true, 'bar' => 'bar'),
-        'column'    => array('type' => 'bar', 'colors' => 0, 'axes' => true, 'bar' => 'col'),
-        'line'      => array('type' => 'line', 'colors' => 0, 'axes' => true),
-        'area'      => array('type' => 'area', 'colors' => 0, 'axes' => true),
-        'radar'     => array('type' => 'radar', 'colors' => 0, 'axes' => true, 'radar' => 'standard', 'no3d' => true),
-        'scatter'   => array('type' => 'scatter', 'colors' => 0, 'axes' => true, 'scatter' => 'marker', 'no3d' => true),
+        'pie'      => array('type' => 'pie', 'colors' => 1),
+        'doughnut' => array('type' => 'doughnut', 'colors' => 1, 'hole' => 75, 'no3d' => true),
+        'bar'      => array('type' => 'bar', 'colors' => 0, 'axes' => true, 'bar' => 'bar'),
+        'column'   => array('type' => 'bar', 'colors' => 0, 'axes' => true, 'bar' => 'col'),
+        'line'     => array('type' => 'line', 'colors' => 0, 'axes' => true),
+        'area'     => array('type' => 'area', 'colors' => 0, 'axes' => true),
+        'radar'    => array('type' => 'radar', 'colors' => 0, 'axes' => true, 'radar' => 'standard', 'no3d' => true),
+        'scatter'  => array('type' => 'scatter', 'colors' => 0, 'axes' => true, 'scatter' => 'marker', 'no3d' => true),
     );
 
     /**
@@ -103,11 +103,56 @@ class Chart extends AbstractPart
     {
         $xmlWriter->startElement('c:chart');
 
-        $xmlWriter->writeElementBlock('c:autoTitleDeleted', 'val', 1);
+        $this->writeTitle($xmlWriter);
 
         $this->writePlotArea($xmlWriter);
 
+        $this->writeLegend($xmlWriter);
+
         $xmlWriter->endElement(); // c:chart
+    }
+
+    /**
+     * Write the title.
+     *
+     * @param \PhpOffice\PhpWord\Shared\XMLWriter $xmlWriter
+     * @return void
+     */
+    private function writeTitle(XMLWriter $xmlWriter)
+    {
+        $options = $this->element->getOptions();
+        if (isset($options['title'])) {
+            $this->writeTitleBlock($xmlWriter, $options['title']);
+
+            $xmlWriter->writeElementBlock('c:autoTitleDeleted', 'val', 0);
+        } else {
+            $xmlWriter->writeElementBlock('c:autoTitleDeleted', 'val', 1);
+        }
+    }
+
+    /**
+     * Write all the block required for a title.
+     *
+     * @param XMLWriter $xmlWriter
+     * @param $title
+     * @return void
+     */
+    private function writeTitleBlock(XMLWriter $xmlWriter, $title)
+    {
+        $xmlWriter->startElement('c:title');
+        $xmlWriter->writeElementBlock('c:overlay', 'val', 0);
+        $xmlWriter->startElement('c:tx');
+        $xmlWriter->startElement('c:rich');
+        $xmlWriter->startElement('a:p');
+        $xmlWriter->startElement('a:r');
+        $xmlWriter->startElement('a:t');
+        $xmlWriter->writeRaw($title);
+        $xmlWriter->endElement();
+        $xmlWriter->endElement();
+        $xmlWriter->endElement();
+        $xmlWriter->endElement();
+        $xmlWriter->endElement();
+        $xmlWriter->endElement();
     }
 
     /**
@@ -135,7 +180,7 @@ class Chart extends AbstractPart
 
         // Chart
         $chartType = $this->options['type'];
-        $chartType .= $style->is3d() && !isset($this->options['no3d'])? '3D' : '';
+        $chartType .= $style->is3d() && !isset($this->options['no3d']) ? '3D' : '';
         $chartType .= 'Chart';
         $xmlWriter->startElement("c:{$chartType}");
 
@@ -192,11 +237,24 @@ class Chart extends AbstractPart
         foreach ($series as $seriesItem) {
             $categories = $seriesItem['categories'];
             $values = $seriesItem['values'];
+            $title = $seriesItem['title'];
 
             $xmlWriter->startElement('c:ser');
 
             $xmlWriter->writeElementBlock('c:idx', 'val', $index);
             $xmlWriter->writeElementBlock('c:order', 'val', $index);
+
+            $xmlWriter->startElement('c:tx');
+            $xmlWriter->startElement('c:strRef');
+            $xmlWriter->startElement('c:strCache');
+            $xmlWriter->startElement('c:pt');
+            $xmlWriter->startElement('c:v');
+            $xmlWriter->writeRaw($title);
+            $xmlWriter->endElement();
+            $xmlWriter->endElement();
+            $xmlWriter->endElement();
+            $xmlWriter->endElement();
+            $xmlWriter->endElement();
 
             if (isset($this->options['scatter'])) {
                 $this->writeShape($xmlWriter);
@@ -217,6 +275,27 @@ class Chart extends AbstractPart
     }
 
     /**
+     * Write shape
+     *
+     * @link http://www.datypic.com/sc/ooxml/t-a_CT_ShapeProperties.html
+     * @param \PhpOffice\PhpWord\Shared\XMLWriter $xmlWriter
+     * @param bool $line
+     * @return void
+     */
+    private function writeShape(XMLWriter $xmlWriter, $line = false)
+    {
+        $xmlWriter->startElement('c:spPr');
+        $xmlWriter->startElement('a:ln');
+        if ($line === true) {
+            $xmlWriter->writeElement('a:solidFill');
+        } else {
+            $xmlWriter->writeElement('a:noFill');
+        }
+        $xmlWriter->endElement(); // a:ln
+        $xmlWriter->endElement(); // c:spPr
+    }
+
+    /**
      * Write series items.
      *
      * @param \PhpOffice\PhpWord\Shared\XMLWriter $xmlWriter
@@ -227,8 +306,8 @@ class Chart extends AbstractPart
     private function writeSeriesItem(XMLWriter $xmlWriter, $type, $values)
     {
         $types = array(
-            'cat' => array('c:cat', 'c:strLit'),
-            'val' => array('c:val', 'c:numLit'),
+            'cat'  => array('c:cat', 'c:strLit'),
+            'val'  => array('c:val', 'c:numLit'),
             'xVal' => array('c:xVal', 'c:strLit'),
             'yVal' => array('c:yVal', 'c:numLit'),
         );
@@ -264,6 +343,7 @@ class Chart extends AbstractPart
      */
     private function writeAxis(XMLWriter $xmlWriter, $type)
     {
+        $options = array_merge_recursive($this->options, $this->element->getOptions());
         $types = array(
             'cat' => array('c:catAx', 1, 'b', 2),
             'val' => array('c:valAx', 2, 'l', 1),
@@ -274,16 +354,29 @@ class Chart extends AbstractPart
 
         $xmlWriter->writeElementBlock('c:axId', 'val', $axisId);
         $xmlWriter->writeElementBlock('c:axPos', 'val', $axisPos);
+
         $xmlWriter->writeElementBlock('c:crossAx', 'val', $axisCross);
         $xmlWriter->writeElementBlock('c:auto', 'val', 1);
 
-        if (isset($this->options['axes'])) {
+        if (isset($options['axes'])) {
             $xmlWriter->writeElementBlock('c:delete', 'val', 0);
-            $xmlWriter->writeElementBlock('c:majorTickMark', 'val', 'none');
+            $xmlWriter->writeElementBlock('c:majorTickMark', 'val', 'out'); // out | none
             $xmlWriter->writeElementBlock('c:minorTickMark', 'val', 'none');
-            $xmlWriter->writeElementBlock('c:tickLblPos', 'val', 'none'); // nextTo
+            $xmlWriter->writeElementBlock('c:tickLblPos', 'val', 'nextTo'); // nextTo | none
             $xmlWriter->writeElementBlock('c:crosses', 'val', 'autoZero');
+            $xmlWriter->writeElementBlock('c:crossBetween', 'val', 'between');
+
+            if (isset($options['axes'][$type])) {
+                if (isset($options['axes'][$type]['title'])) {
+                    $this->writeTitleBlock($xmlWriter, $options['axes'][$type]['title']);
+                }
+
+                if (isset($options['axes'][$type]['gridlines']) && $options['axes'][$type]['gridlines'] === true) {
+                    $xmlWriter->writeElement('c:majorGridlines');
+                }
+            }
         }
+
         if (isset($this->options['radar'])) {
             $xmlWriter->writeElement('c:majorGridlines');
         }
@@ -298,23 +391,16 @@ class Chart extends AbstractPart
     }
 
     /**
-     * Write shape
+     * Write the legend.
      *
-     * @link http://www.datypic.com/sc/ooxml/t-a_CT_ShapeProperties.html
-     * @param \PhpOffice\PhpWord\Shared\XMLWriter $xmlWriter
-     * @param bool $line
+     * @param XMLWriter $xmlWriter
      * @return void
      */
-    private function writeShape(XMLWriter $xmlWriter, $line = false)
-    {
-        $xmlWriter->startElement('c:spPr');
-        $xmlWriter->startElement('a:ln');
-        if ($line === true) {
-            $xmlWriter->writeElement('a:solidFill');
-        } else {
-            $xmlWriter->writeElement('a:noFill');
-        }
-        $xmlWriter->endElement(); // a:ln
-        $xmlWriter->endElement(); // c:spPr
+    private function writeLegend(XMLWriter $xmlWriter){
+        $xmlWriter->startElement('c:legend');
+        $xmlWriter->writeElementBlock('c:legendPos', 'val', 'b');
+        $xmlWriter->writeElement('c:layout');
+        $xmlWriter->writeElementBlock('c:overlay', 'val', 0);
+        $xmlWriter->endElement();
     }
 }
