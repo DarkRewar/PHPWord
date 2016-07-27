@@ -42,7 +42,7 @@ namespace PhpOffice\PhpWord\Element;
  * @method Field addField(string $type = null, array $properties = array(), array $options = array())
  * @method Line addLine(mixed $lineStyle = null)
  * @method Shape addShape(string $type, mixed $style = null)
- * @method Chart addChart(string $type, array $categories, array $values, string $title, array $style = null)
+ * @method Chart addChart(string $type, array $categories, array $values, array $style = null, string $title = null)
  * @method FormField addFormField(string $type, mixed $fStyle = null, mixed $pStyle = null)
  * @method SDT addSDT(string $type)
  *

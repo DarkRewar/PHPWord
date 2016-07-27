@@ -140,19 +140,26 @@ class Chart extends AbstractPart
     private function writeTitleBlock(XMLWriter $xmlWriter, $title)
     {
         $xmlWriter->startElement('c:title');
-        $xmlWriter->writeElementBlock('c:overlay', 'val', 0);
         $xmlWriter->startElement('c:tx');
         $xmlWriter->startElement('c:rich');
+        $xmlWriter->writeElement('a:bodyPr');
+        $xmlWriter->writeElement('a:lstStyle');
         $xmlWriter->startElement('a:p');
+        $xmlWriter->startElement('a:pPr');
+        $xmlWriter->writeElement('a:defRPr');
+        $xmlWriter->endElement(); // a:pPr
         $xmlWriter->startElement('a:r');
+        $xmlWriter->writeElementBlock('a:rPr', 'lang', 'fr-FR');
         $xmlWriter->startElement('a:t');
         $xmlWriter->writeRaw($title);
-        $xmlWriter->endElement();
-        $xmlWriter->endElement();
-        $xmlWriter->endElement();
-        $xmlWriter->endElement();
-        $xmlWriter->endElement();
-        $xmlWriter->endElement();
+        $xmlWriter->endElement(); // a:t
+        $xmlWriter->endElement(); // a:r
+        $xmlWriter->endElement(); // a:p
+        $xmlWriter->endElement(); // c:rich
+        $xmlWriter->endElement(); // c:tx
+        $xmlWriter->writeElement('c:layout');
+        $xmlWriter->writeElementBlock('c:overlay', 'val', 0);
+        $xmlWriter->endElement(); // c:title
     }
 
     /**
@@ -244,17 +251,21 @@ class Chart extends AbstractPart
             $xmlWriter->writeElementBlock('c:idx', 'val', $index);
             $xmlWriter->writeElementBlock('c:order', 'val', $index);
 
-            $xmlWriter->startElement('c:tx');
-            $xmlWriter->startElement('c:strRef');
-            $xmlWriter->startElement('c:strCache');
-            $xmlWriter->startElement('c:pt');
-            $xmlWriter->startElement('c:v');
-            $xmlWriter->writeRaw($title);
-            $xmlWriter->endElement();
-            $xmlWriter->endElement();
-            $xmlWriter->endElement();
-            $xmlWriter->endElement();
-            $xmlWriter->endElement();
+            if (isset($seriesItem['title'])) {
+                $xmlWriter->startElement('c:tx');
+                $xmlWriter->startElement('c:strRef');
+                $xmlWriter->startElement('c:strCache');
+                $xmlWriter->writeElementBlock('c:ptCount', 'val', 1);
+                $xmlWriter->startElement('c:pt');
+                $xmlWriter->writeAttribute('idx', 0);
+                $xmlWriter->startElement('c:v');
+                $xmlWriter->writeRaw($seriesItem['title']);
+                $xmlWriter->endElement();
+                $xmlWriter->endElement();
+                $xmlWriter->endElement();
+                $xmlWriter->endElement();
+                $xmlWriter->endElement();
+            }
 
             if (isset($this->options['scatter'])) {
                 $this->writeShape($xmlWriter);
@@ -344,6 +355,7 @@ class Chart extends AbstractPart
     private function writeAxis(XMLWriter $xmlWriter, $type)
     {
         $options = array_merge_recursive($this->options, $this->element->getOptions());
+
         $types = array(
             'cat' => array('c:catAx', 1, 'b', 2),
             'val' => array('c:valAx', 2, 'l', 1),
@@ -360,11 +372,13 @@ class Chart extends AbstractPart
 
         if (isset($options['axes'])) {
             $xmlWriter->writeElementBlock('c:delete', 'val', 0);
-            $xmlWriter->writeElementBlock('c:majorTickMark', 'val', 'out'); // out | none
+            $xmlWriter->writeElementBlock('c:majorTickMark', 'val', 'out');
             $xmlWriter->writeElementBlock('c:minorTickMark', 'val', 'none');
-            $xmlWriter->writeElementBlock('c:tickLblPos', 'val', 'nextTo'); // nextTo | none
+            $xmlWriter->writeElementBlock('c:tickLblPos', 'val', 'nextTo'); // nextTo
             $xmlWriter->writeElementBlock('c:crosses', 'val', 'autoZero');
-            $xmlWriter->writeElementBlock('c:crossBetween', 'val', 'between');
+            $xmlWriter->writeElementBlock('c:lblAlgn', 'val', 'ctr');
+            $xmlWriter->writeElementBlock('c:lblOffset', 'val', 100);
+            $xmlWriter->writeElementBlock('c:noMultiLvlLbl', 'val', 1);
 
             if (isset($options['axes'][$type])) {
                 if (isset($options['axes'][$type]['title'])) {
@@ -396,7 +410,8 @@ class Chart extends AbstractPart
      * @param XMLWriter $xmlWriter
      * @return void
      */
-    private function writeLegend(XMLWriter $xmlWriter){
+    private function writeLegend(XMLWriter $xmlWriter)
+    {
         $xmlWriter->startElement('c:legend');
         $xmlWriter->writeElementBlock('c:legendPos', 'val', 'b');
         $xmlWriter->writeElement('c:layout');
